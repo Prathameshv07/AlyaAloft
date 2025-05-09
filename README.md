@@ -25,11 +25,7 @@ AlyaAloft uses several techniques to improve the quality of FLAN-T5 responses:
 6. **Response Enhancement**: Post-processes responses for readability and completeness
 
 ## Video Preview
-
-<div class="iframe-container">
-   <!-- Placeholder for iframe -->
-   <iframe src="https://drive.google.com/file/d/1yh6PwrA9BkQT_A1Vz3L7Cna-tNLyN0TO/preview" width="100%" height="480" frameborder="0" allow="autoplay"></iframe>
-</div>
+Check out my application: [AlyaAloft](https://drive.google.com/file/d/1yh6PwrA9BkQT_A1Vz3L7Cna-tNLyN0TO/view)
 
 ## Getting Started
 
