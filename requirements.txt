@@ -1,0 +1,54 @@
+# Core dependencies
+fastapi>=0.95.0
+uvicorn>=0.22.0
+jinja2>=3.1.2
+python-multipart>=0.0.6
+aiofiles>=23.1.0
+pydantic>=2.0.0
+
+# Database and storage
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+# PDF processing
+pypdf>=3.15.1
+pdfminer.six>=20221105
+pytesseract>=0.3.10
+
+# Language models
+transformers>=4.31.0
+torch>=2.0.0
+accelerate>=0.20.3
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+
+# Optional but recommended for performance
+bitsandbytes>=0.40.0  # For 8-bit quantization
+scipy>=1.10.0  # Required for some transformers operations
+scikit-learn>=1.2.2  # For vector operations
+tokenizers>=0.13.3  # Faster tokenization
+
+# Text processing
+nltk>=3.8.1
+regex>=2023.3.23
+
+# Embedding models
+sentence-transformers>=2.2.2
+
+# Utilities
+tqdm>=4.65.0
+colorama>=0.4.6
+loguru>=0.7.0
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.3.1
+pytest-asyncio>=0.21.0
+httpx>=0.24.0
+
+# Additional dependencies
+filelock==3.13.1
+safetensors>=0.4.2
+
+# Using CUDA 12.1 version of PyTorch - uncomment if needed
+# Install with: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 

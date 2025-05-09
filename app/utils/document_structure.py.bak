@@ -1,0 +1,387 @@
+"""
+Document structure extraction and enhanced metadata generation.
+"""
+
+import re
+import json
+import os
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Tuple
+import asyncio
+
+from app import app_config as config
+from app.utils.logging_utils import get_logger, log_function_call
+from app.prompts.document_prompts import COMMON_SECTION_PATTERNS, DOCUMENT_STRUCTURE_EXTRACTION_PROMPT
+from app.utils.ai_utils import ai_response_generator
+
+# Get logger for this module
+logger = get_logger(__name__)
+
+class DocumentStructureExtractor:
+    """Extract document structure from text like headers, sections, and hierarchy."""
+    
+    def __init__(self):
+        """Initialize the document structure extractor."""
+        self.processed_dir = Path(config.DATA_DIR) / "processed"
+        self.processed_dir.mkdir(exist_ok=True, parents=True)
+    
+    @log_function_call
+    async def extract_document_structure(self, doc_id: str, full_text: str) -> Dict[str, Any]:
+        """
+        Extract and analyze document structure from full text.
+        
+        Args:
+            doc_id: Document ID
+            full_text: Full document text
+            
+        Returns:
+            Dictionary with structure information
+        """
+        # Check for cached structure
+        cached_structure = self._get_cached_structure(doc_id)
+        if cached_structure:
+            logger.info(f"Using cached document structure for {doc_id}")
+            return cached_structure
+        
+        # Extract basic structure using regex
+        structure = {
+            "doc_id": doc_id,
+            "sections": await self._extract_sections(full_text),
+            "headings": self._extract_headings(full_text),
+            "toc": [],  # Will be populated if a table of contents is found
+            "ai_analysis": await self._analyze_structure_with_ai(full_text),
+        }
+        
+        # Try to extract table of contents
+        toc = self._extract_toc(full_text)
+        if toc:
+            structure["toc"] = toc
+        
+        # Extract key phrases
+        structure["key_phrases"] = self._extract_key_phrases(full_text)
+        
+        # Save to cache
+        self._cache_structure(doc_id, structure)
+        
+        return structure
+    
+    def _get_cached_structure(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get cached document structure if available.
+        
+        Args:
+            doc_id: Document ID
+            
+        Returns:
+            Cached structure or None if not found
+        """
+        cache_file = self.processed_dir / f"{doc_id}_structure.json"
+        if cache_file.exists():
+            try:
+                with open(cache_file, "r") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Error loading cached structure: {str(e)}")
+        
+        return None
+    
+    def _cache_structure(self, doc_id: str, structure: Dict[str, Any]) -> None:
+        """
+        Cache document structure for future use.
+        
+        Args:
+            doc_id: Document ID
+            structure: Document structure data
+        """
+        try:
+            cache_file = self.processed_dir / f"{doc_id}_structure.json"
+            with open(cache_file, "w") as f:
+                json.dump(structure, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error caching structure: {str(e)}")
+    
+    @log_function_call
+    async def _extract_sections(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Extract sections from document text.
+        
+        Args:
+            text: Document text
+            
+        Returns:
+            List of section dictionaries
+        """
+        sections = []
+        lines = text.split("\n")
+        
+        current_section = {"title": "Introduction", "content": [], "level": 1}
+        
+        for line in lines:
+            line_text = line.strip()
+            if not line_text:
+                continue
+            
+            # Check if this line matches a section header pattern
+            is_header = False
+            header_level = 1
+            
+            for pattern in COMMON_SECTION_PATTERNS:
+                if re.match(pattern, line_text, re.IGNORECASE):
+                    is_header = True
+                    # Try to determine the header level
+                    if re.match(r'^[\d\.]+\s', line_text):
+                        # Count the dots to determine level
+                        parts = line_text.split(" ")[0].strip()
+                        header_level = parts.count(".") + 1
+                    
+                    # If it's a chapter, it's top level
+                    if "chapter" in line_text.lower():
+                        header_level = 1
+                    
+                    break
+            
+            if is_header:
+                # Save current section if it has content
+                if current_section["content"]:
+                    sections.append({
+                        "title": current_section["title"],
+                        "content": "\n".join(current_section["content"]),
+                        "level": current_section["level"]
+                    })
+                
+                # Start new section
+                current_section = {
+                    "title": line_text,
+                    "content": [],
+                    "level": header_level
+                }
+            else:
+                # Add to current section
+                current_section["content"].append(line_text)
+        
+        # Add the last section
+        if current_section["content"]:
+            sections.append({
+                "title": current_section["title"],
+                "content": "\n".join(current_section["content"]),
+                "level": current_section["level"]
+            })
+        
+        return sections
+    
+    def _extract_headings(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Extract headings from document text.
+        
+        Args:
+            text: Document text
+            
+        Returns:
+            List of heading dictionaries
+        """
+        headings = []
+        lines = text.split("\n")
+        
+        for i, line in enumerate(lines):
+            line_text = line.strip()
+            if not line_text:
+                continue
+            
+            # Check if this line matches a header pattern
+            for pattern in COMMON_SECTION_PATTERNS:
+                if re.match(pattern, line_text, re.IGNORECASE):
+                    # Determine level
+                    level = 1
+                    if re.match(r'^[\d\.]+\s', line_text):
+                        parts = line_text.split(" ")[0].strip()
+                        level = parts.count(".") + 1
+                    
+                    # If it's a chapter, it's top level
+                    if "chapter" in line_text.lower():
+                        level = 1
+                    
+                    headings.append({
+                        "text": line_text,
+                        "line_number": i,
+                        "level": level
+                    })
+                    break
+        
+        return headings
+    
+    def _extract_toc(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Try to extract table of contents if it exists.
+        
+        Args:
+            text: Document text
+            
+        Returns:
+            List of TOC entries or empty list if none found
+        """
+        toc = []
+        lines = text.split("\n")
+        
+        # Look for typical TOC markers
+        toc_start = -1
+        toc_end = -1
+        
+        for i, line in enumerate(lines):
+            line_lower = line.lower().strip()
+            
+            # Check for TOC header
+            if (line_lower == "table of contents" or 
+                line_lower == "contents" or 
+                line_lower == "toc") and toc_start == -1:
+                toc_start = i
+                continue
+            
+            # Check for end of TOC (usually when we hit Chapter 1 or Introduction)
+            if toc_start != -1 and (
+                "chapter 1" in line_lower or 
+                "introduction" in line_lower or
+                "1. introduction" in line_lower or
+                i - toc_start > 100  # Limit TOC to reasonable size
+            ):
+                toc_end = i
+                break
+        
+        # If we found a TOC section
+        if toc_start != -1 and toc_end != -1:
+            for i in range(toc_start + 1, toc_end):
+                line = lines[i].strip()
+                if not line:
+                    continue
+                
+                # Look for chapter/section patterns in TOC
+                # Often they have page numbers at the end
+                match = re.match(r'^(.*?)\s*\.{2,}\s*\d+$', line)
+                if match:
+                    title = match.group(1).strip()
+                    toc.append({"title": title})
+                elif re.match(r'^(chapter|section|\d+\.)', line.lower()):
+                    toc.append({"title": line})
+        
+        return toc
+    
+    def _extract_key_phrases(self, text: str) -> List[str]:
+        """
+        Extract key phrases and potential terminology from document.
+        
+        Args:
+            text: Document text
+            
+        Returns:
+            List of key phrases
+        """
+        # Focus on capitalized phrases which are often important terms
+        phrases = []
+        
+        # Match capitalized phrases (2+ words)
+        capitalized_pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b'
+        matches = re.findall(capitalized_pattern, text)
+        
+        # Add unique matches
+        for match in matches:
+            if match not in phrases and len(match) > 5:  # Avoid very short phrases
+                phrases.append(match)
+        
+        # Limit to top phrases to avoid overwhelming
+        return phrases[:25]
+    
+    @log_function_call
+    async def _analyze_structure_with_ai(self, text: str) -> Dict[str, Any]:
+        """
+        Use AI to analyze document structure.
+        
+        Args:
+            text: Document text
+            
+        Returns:
+            AI analysis of document structure
+        """
+        try:
+            # Limit text size for AI analysis
+            text_for_analysis = text[:20000]  # First 20K characters should be sufficient
+            
+            # Create prompt with document structure extraction template
+            prompt = DOCUMENT_STRUCTURE_EXTRACTION_PROMPT.format(text=text_for_analysis)
+            
+            # Use Llama model first if available
+            if ai_response_generator.llama_available:
+                try:
+                    response = await asyncio.to_thread(
+                        ai_response_generator.llama_model.generate,
+                        prompt,
+                        max_new_tokens=1024,
+                        temperature=0.3,  # Lower temperature for more consistent results
+                        top_p=0.95,
+                        repetition_penalty=1.1
+                    )
+                    
+                    # Extract response after prompt
+                    if response.startswith(prompt):
+                        response = response[len(prompt):].strip()
+                    
+                    return self._parse_ai_structure_response(response)
+                except Exception as e:
+                    logger.error(f"Error in Llama structure analysis: {str(e)}")
+            
+            # Fall back to manual structure analysis
+            return {
+                "document_type": "Unknown",
+                "main_sections": [],
+                "organization": "Unable to analyze with AI"
+            }
+        
+        except Exception as e:
+            logger.error(f"Error in AI structure analysis: {str(e)}")
+            return {}
+    
+    def _parse_ai_structure_response(self, response: str) -> Dict[str, Any]:
+        """
+        Parse AI structure analysis response.
+        
+        Args:
+            response: AI response text
+            
+        Returns:
+            Structured data from AI analysis
+        """
+        # Initialize results structure
+        structure = {
+            "document_type": "Unknown",
+            "main_sections": [],
+            "hierarchy": "",
+            "section_topics": {},
+            "organization": ""
+        }
+        
+        try:
+            # Look for document type
+            doc_type_match = re.search(r'DOCUMENT TYPE:?\s*(.*?)(?:\n|$)', response, re.IGNORECASE)
+            if doc_type_match:
+                structure["document_type"] = doc_type_match.group(1).strip()
+            
+            # Look for main sections
+            sections_match = re.search(r'MAIN SECTIONS:?\s*(.*?)(?:\n\d|\[\w|$)', response, re.DOTALL | re.IGNORECASE)
+            if sections_match:
+                sections_text = sections_match.group(1).strip()
+                # Split by lines and bullet points
+                sections = re.split(r'\n+|•|\-|\*|\d+\.', sections_text)
+                sections = [s.strip() for s in sections if s.strip()]
+                structure["main_sections"] = sections
+            
+            # Look for organization pattern
+            org_match = re.search(r'OVERALL ORGANIZATION:?\s*(.*?)(?:\n|$)', response, re.DOTALL | re.IGNORECASE)
+            if org_match:
+                structure["organization"] = org_match.group(1).strip()
+            
+            return structure
+        
+        except Exception as e:
+            logger.error(f"Error parsing AI structure response: {str(e)}")
+            return structure
+
+# Initialize as singleton
+document_structure_extractor = DocumentStructureExtractor() 

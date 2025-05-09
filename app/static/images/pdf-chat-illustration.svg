@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800px" height="600px" viewBox="0 0 800 600" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>PDF Chat Illustration</title>
+    <defs>
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="linearGradient-1">
+            <stop stop-color="#E0F2FE" offset="0%"></stop>
+            <stop stop-color="#BAE6FD" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="linearGradient-2">
+            <stop stop-color="#0EA5E9" offset="0%"></stop>
+            <stop stop-color="#0369A1" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="PDF-Chat" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <!-- Background -->
+        <rect id="Background" fill="url(#linearGradient-1)" x="0" y="0" width="800" height="600" rx="20"></rect>
+        
+        <!-- PDF Document -->
+        <g id="PDF-Document" transform="translate(150, 100)">
+            <rect id="PDF-Page" fill="#FFFFFF" x="0" y="0" width="200" height="280" rx="8"></rect>
+            <rect id="PDF-Header" fill="#F3F4F6" x="20" y="30" width="160" height="20" rx="4"></rect>
+            <rect id="PDF-Text-1" fill="#F3F4F6" x="20" y="70" width="160" height="10" rx="2"></rect>
+            <rect id="PDF-Text-2" fill="#F3F4F6" x="20" y="90" width="140" height="10" rx="2"></rect>
+            <rect id="PDF-Text-3" fill="#F3F4F6" x="20" y="110" width="160" height="10" rx="2"></rect>
+            <rect id="PDF-Text-4" fill="#F3F4F6" x="20" y="130" width="120" height="10" rx="2"></rect>
+            
+            <rect id="PDF-Image" fill="#E0F2FE" x="20" y="160" width="160" height="80" rx="4"></rect>
+            
+            <rect id="PDF-Text-5" fill="#F3F4F6" x="20" y="260" width="160" height="10" rx="2"></rect>
+            
+            <path d="M0,0 L40,40 L0,40 Z" fill="#CBD5E1" transform="translate(160, 0)"></path>
+            
+            <!-- PDF Icon -->
+            <g id="PDF-Icon" transform="translate(75, 10)">
+                <rect fill="#EF4444" x="0" y="0" width="50" height="20" rx="4"></rect>
+                <text font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#FFFFFF" text-anchor="middle" x="25" y="15">PDF</text>
+            </g>
+        </g>
+        
+        <!-- Chat Bubbles -->
+        <g id="Chat-Bubbles" transform="translate(400, 140)">
+            <!-- User bubble -->
+            <g id="User-Bubble" transform="translate(0, 0)">
+                <rect id="User-Message" fill="#FFFFFF" x="0" y="0" width="180" height="60" rx="12"></rect>
+                <rect id="User-Text-1" fill="#F3F4F6" x="15" y="15" width="150" height="10" rx="2"></rect>
+                <rect id="User-Text-2" fill="#F3F4F6" x="15" y="35" width="120" height="10" rx="2"></rect>
+                <circle id="User-Avatar" fill="#0EA5E9" cx="230" cy="30" r="20"></circle>
+                <path d="M220,30 C220,24.5 224.5,20 230,20 C235.5,20 240,24.5 240,30 C240,35.5 235.5,40 230,40 C224.5,40 220,35.5 220,30 Z M225,27 L235,27 L235,33 L225,33 Z" fill="#FFFFFF"></path>
+            </g>
+            
+            <!-- AI bubble -->
+            <g id="AI-Bubble" transform="translate(50, 80)">
+                <rect id="AI-Message" fill="url(#linearGradient-2)" x="0" y="0" width="200" height="80" rx="12"></rect>
+                <rect id="AI-Text-1" fill="rgba(255,255,255,0.2)" x="15" y="15" width="170" height="10" rx="2"></rect>
+                <rect id="AI-Text-2" fill="rgba(255,255,255,0.2)" x="15" y="35" width="150" height="10" rx="2"></rect>
+                <rect id="AI-Text-3" fill="rgba(255,255,255,0.2)" x="15" y="55" width="130" height="10" rx="2"></rect>
+                <circle id="AI-Avatar" fill="#FFFFFF" cx="-30" cy="40" r="20"></circle>
+                <path d="M-40,40 C-40,34.5 -35.5,30 -30,30 C-24.5,30 -20,34.5 -20,40 C-20,45.5 -24.5,50 -30,50 C-35.5,50 -40,45.5 -40,40 Z M-37,36 L-23,36 M-37,40 L-23,40 M-37,44 L-23,44" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round"></path>
+            </g>
+            
+            <!-- User bubble 2 -->
+            <g id="User-Bubble-2" transform="translate(0, 180)">
+                <rect id="User-Message-2" fill="#FFFFFF" x="0" y="0" width="150" height="40" rx="12"></rect>
+                <rect id="User-Text-3" fill="#F3F4F6" x="15" y="15" width="120" height="10" rx="2"></rect>
+                <circle id="User-Avatar-2" fill="#0EA5E9" cx="200" cy="20" r="20"></circle>
+                <path d="M190,20 C190,14.5 194.5,10 200,10 C205.5,10 210,14.5 210,20 C210,25.5 205.5,30 200,30 C194.5,30 190,25.5 190,20 Z M195,17 L205,17 L205,23 L195,23 Z" fill="#FFFFFF"></path>
+            </g>
+            
+            <!-- AI bubble 2 -->
+            <g id="AI-Bubble-2" transform="translate(80, 240)">
+                <rect id="AI-Message-2" fill="url(#linearGradient-2)" x="0" y="0" width="170" height="60" rx="12"></rect>
+                <rect id="AI-Text-4" fill="rgba(255,255,255,0.2)" x="15" y="15" width="140" height="10" rx="2"></rect>
+                <rect id="AI-Text-5" fill="rgba(255,255,255,0.2)" x="15" y="35" width="100" height="10" rx="2"></rect>
+                <circle id="AI-Avatar-2" fill="#FFFFFF" cx="-30" cy="30" r="20"></circle>
+                <path d="M-40,30 C-40,24.5 -35.5,20 -30,20 C-24.5,20 -20,24.5 -20,30 C-20,35.5 -24.5,40 -30,40 C-35.5,40 -40,35.5 -40,30 Z M-37,26 L-23,26 M-37,30 L-23,30 M-37,34 L-23,34" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round"></path>
+            </g>
+        </g>
+        
+        <!-- Connecting Lines -->
+        <g id="Connecting-Lines" stroke="#0EA5E9" stroke-width="3" stroke-dasharray="6,3" stroke-linecap="round">
+            <path d="M350,200 C375,200 375,170 400,170" id="Line-1"></path>
+            <path d="M420,240 C395,240 395,270 370,270" id="Line-2"></path>
+        </g>
+        
+        <!-- Decorative Elements -->
+        <g id="Decorative-Elements">
+            <circle id="Dot-1" fill="#0EA5E9" opacity="0.2" cx="100" cy="100" r="20"></circle>
+            <circle id="Dot-2" fill="#0EA5E9" opacity="0.2" cx="700" cy="500" r="30"></circle>
+            <circle id="Dot-3" fill="#0EA5E9" opacity="0.2" cx="150" cy="450" r="15"></circle>
+            <circle id="Dot-4" fill="#0EA5E9" opacity="0.2" cx="650" cy="150" r="25"></circle>
+        </g>
+    </g>
+</svg> 

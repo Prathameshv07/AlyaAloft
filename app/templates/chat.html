@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }} - Chat Interface</title>
+    
+    <!-- Import Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com/3.4.0"></script>
+    
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-xl font-bold text-primary-700">{{ app_name }}</span>
+            </div>
+            
+            <nav class="hidden md:flex space-x-8">
+                <a href="/" class="text-gray-600 hover:text-primary-700 transition-colors">Home</a>
+                <a href="/chat" class="text-primary-700 font-semibold">Chat</a>
+            </nav>
+            
+            <div class="flex items-center space-x-4">
+                <span id="connection-status" class="hidden md:inline-block px-3 py-1 text-xs font-medium rounded-full bg-gray-200 text-gray-800">
+                    Disconnected
+                </span>
+                
+                <div class="md:hidden">
+                    <button type="button" id="menu-button" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile menu (hidden by default) -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-gray-200">
+            <div class="container mx-auto px-4 py-3 space-y-3">
+                <a href="/" class="block text-gray-600 hover:text-primary-700 transition-colors">Home</a>
+                <a href="/chat" class="block text-primary-700 font-semibold">Chat</a>
+                <div class="flex items-center">
+                    <span class="mr-2 text-sm text-gray-600">Status:</span>
+                    <span id="mobile-connection-status" class="px-3 py-1 text-xs font-medium rounded-full bg-gray-200 text-gray-800">
+                        Disconnected
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col md:flex-row overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-full md:w-80 lg:w-96 bg-white border-r border-gray-200 flex flex-col max-h-screen">
+            <!-- Document Upload -->
+            <div class="p-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold mb-2">Upload Document</h2>
+                <form id="upload-form" class="space-y-3">
+                    <div class="flex flex-col">
+                        <label for="title" class="text-sm text-gray-600 mb-1">Title (optional)</label>
+                        <input type="text" id="title" name="title" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Enter document title">
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <label for="file" class="text-sm text-gray-600 mb-1">PDF File (max {{ max_upload_size_mb }}MB)</label>
+                        <div class="relative">
+                            <input type="file" id="file" name="file" accept=".pdf" class="sr-only" required>
+                            <label for="file" class="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                <span id="file-name" class="text-gray-500 truncate">Select PDF file</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="upload-button" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors">
+                        Upload Document
+                    </button>
+                </form>
+                <div id="upload-progress" class="hidden mt-3">
+                    <div class="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                        <div id="upload-progress-bar" class="h-full bg-primary-600 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p id="upload-status" class="text-sm text-gray-600 mt-1">Uploading...</p>
+                </div>
+            </div>
+            
+            <!-- Document List -->
+            <div class="flex-grow overflow-y-auto">
+                <div class="p-4">
+                    <h2 class="text-lg font-semibold mb-2">Your Documents</h2>
+                    <div id="documents-list" class="space-y-3">
+                        <div class="flex items-center justify-center h-32 text-gray-500">
+                            <p>No documents yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Chat Interface -->
+        <section class="flex-grow flex flex-col bg-gray-50 max-h-screen overflow-hidden">
+            <!-- Chat header -->
+            <div id="chat-header" class="bg-white border-b border-gray-200 p-4">
+                <div class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                    </svg>
+                    <h2 id="chat-title" class="text-lg font-semibold">No document selected</h2>
+                </div>
+                <p id="chat-subtitle" class="text-sm text-gray-500 ml-8">Select a document to start chatting</p>
+            </div>
+            
+            <!-- Chat messages -->
+            <div id="messages-container" class="flex-grow overflow-y-auto p-4 space-y-4">
+                <div class="flex items-center justify-center h-full text-gray-500">
+                    <div class="text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-300 mb-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
+                        </svg>
+                        <p class="text-lg font-medium">No conversation yet</p>
+                        <p class="mt-1">Upload or select a document to start chatting</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat input -->
+            <div id="chat-input-container" class="border-t border-gray-200 bg-white p-4">
+                <form id="chat-form" class="flex items-center space-x-3">
+                    <div class="flex-grow relative">
+                        <input type="text" id="message-input" name="message" class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Ask a question about the document..." disabled>
+                        <div id="typing-indicator" class="hidden absolute right-3 top-3">
+                            <div class="flex space-x-1">
+                                <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce"></div>
+                                <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                <div class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" id="send-button" class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Templates -->
+    <template id="message-template">
+        <div class="message flex flex-col w-full max-w-5xl mx-auto">
+            <div class="flex items-start">
+                <div class="message-icon flex-shrink-0 w-8 h-8 rounded-full mr-3 flex items-center justify-center"></div>
+                <div class="message-content flex-grow">
+                    <div class="message-text prose prose-sm max-w-none"></div>
+                    <div class="message-meta text-xs text-gray-500 mt-1"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <template id="document-template">
+        <div class="document p-3 border border-gray-200 rounded-md bg-white hover:border-primary-300 hover:shadow-sm cursor-pointer transition-all">
+            <div class="flex items-center justify-between mb-1">
+                <h3 class="document-title font-medium text-gray-900 truncate"></h3>
+                <span class="document-status px-2 py-0.5 text-xs rounded-full"></span>
+            </div>
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500 document-meta"></div>
+                <div class="document-actions flex items-center space-x-2"></div>
+            </div>
+        </div>
+    </template>
+
+    <!-- JavaScript -->
+    <script src="/static/js/app.js"></script>
+    <script>
+        // Mobile menu toggle
+        const menuButton = document.getElementById('menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        menuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+        
+        // File upload name display
+        const fileInput = document.getElementById('file');
+        const fileName = document.getElementById('file-name');
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileName.textContent = e.target.files[0].name;
+            } else {
+                fileName.textContent = 'Select PDF file';
+            }
+        });
+    </script>
+
+    <style>
+        /* Custom styles for messages */
+        .message.system {
+            background-color: rgba(14, 165, 233, 0.05);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .message.system .message-text {
+            color: #0c4a6e;
+        }
+        
+        .message.system .message-icon {
+            background-color: rgba(14, 165, 233, 0.1);
+            color: #0369a1;
+        }
+        
+        .message.user {
+            margin-bottom: 1rem;
+        }
+        
+        .message.user .message-icon {
+            background-color: rgba(14, 165, 233, 0.2);
+            color: #0284c7;
+        }
+        
+        /* Document status styles */
+        .document-status.completed {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: rgb(21, 128, 61);
+        }
+        
+        .document-status.processing {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: rgb(29, 78, 216);
+        }
+        
+        .document-status.pending {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: rgb(180, 83, 9);
+        }
+        
+        .document-status.failed {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: rgb(185, 28, 28);
+        }
+        
+        /* Selected document style */
+        .document.selected {
+            border-color: rgb(14, 165, 233);
+            background-color: rgba(14, 165, 233, 0.05);
+        }
+        
+        /* Animation for the typing indicator */
+        @keyframes blink {
+            0% { opacity: 0.2; }
+            20% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+        
+        #typing-indicator .animate-bounce {
+            animation: blink 1.4s infinite ease-in-out both;
+        }
+    </style>
+</body>
+</html> 

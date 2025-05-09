@@ -1,0 +1,977 @@
+"""
+API routes for the AlyaAloft application.
+Provides endpoints for document upload, chat, and WebSocket connections.
+"""
+
+import json
+import time
+import uuid
+import asyncio
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from fastapi import (
+    APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, 
+    Request, UploadFile, WebSocket, WebSocketDisconnect, status
+)
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from app import app_config as config
+from app.storage import json_storage
+from app.utils.logging_utils import get_logger, log_function_call
+from app.utils.pdf_processor import pdf_processor
+from app.utils.ai_utils import ai_response_generator
+from app.prompts.document_prompts import is_summary_query, is_unclear_query
+from app.utils.state_manager import state_manager
+
+# Create a logger for this module
+logger = get_logger(__name__)
+
+# Define ChatMessage model for API request validation
+class ChatMessage(BaseModel):
+    document_id: str
+    content: str
+
+# Create a router with API prefix
+router = APIRouter(prefix=config.API_V1_STR, tags=["api"])
+
+# WebSocket connection manager
+class ConnectionManager:
+    """Manages WebSocket connections."""
+    
+    def __init__(self):
+        """Initialize the connection manager."""
+        self.active_connections: List[WebSocket] = []
+    
+    async def connect(self, websocket: WebSocket):
+        """
+        Connect a WebSocket.
+        
+        Args:
+            websocket: WebSocket connection
+        """
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        logger.info(f"WebSocket connected: {len(self.active_connections)} active connections")
+    
+    def disconnect(self, websocket: WebSocket):
+        """
+        Disconnect a WebSocket.
+        
+        Args:
+            websocket: WebSocket connection
+        """
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+            logger.info(f"WebSocket disconnected: {len(self.active_connections)} active connections")
+    
+    async def send_personal_message(self, message: Dict[str, Any], websocket: WebSocket):
+        """
+        Send a message to a specific WebSocket.
+        
+        Args:
+            message: Message to send
+            websocket: WebSocket connection
+        """
+        await websocket.send_json(message)
+    
+    async def broadcast(self, message: Dict[str, Any]):
+        """
+        Broadcast a message to all connected WebSockets.
+        
+        Args:
+            message: Message to broadcast
+        """
+        for connection in self.active_connections:
+            await connection.send_json(message)
+            
+    def _is_document_summary_query(self, query: str) -> bool:
+        """
+        Determine if a query is asking for a document summary.
+        
+        This uses advanced pattern matching to identify various ways a user
+        might ask about what a document is about.
+        
+        Args:
+            query: The user's query string
+            
+        Returns:
+            True if this appears to be a document summary query, False otherwise
+        """
+        # Convert to lowercase for easier matching
+        query_lower = query.lower()
+        
+        # Common summary request patterns
+        summary_patterns = [
+            # Direct "what is this about" queries
+            r'what\s+is\s+this\s+(pdf|document|file|about)',
+            r'what\'s\s+this\s+(pdf|document|file|about)',
+            r'tell\s+me\s+about\s+this\s+(pdf|document|file)',
+            r'explain\s+what\s+this\s+(pdf|document|file)\s+is\s+about',
+            r'describe\s+this\s+(pdf|document|file)',
+            
+            # Summary requests
+            r'(summarize|summary\s+of)\s+this\s+(pdf|document|file)',
+            r'(give|provide|create)\s+a\s+summary',
+            r'(overview|gist)\s+of\s+this\s+(pdf|document|file)',
+            
+            # Content questions
+            r'what\'?s?\s+(in|inside|contained\s+in)\s+this\s+(pdf|document|file)',
+            r'what\s+does\s+this\s+(pdf|document|file)\s+(contain|talk\s+about|discuss|cover)',
+            r'what\s+information\s+does\s+this\s+(pdf|document|file)\s+have',
+            
+            # Topic/theme questions
+            r'what\s+(topics|themes?|subjects?)\s+does\s+this\s+(pdf|document|file)\s+cover',
+            r'what\s+is\s+the\s+(main\s+topic|subject|theme)\s+of\s+this\s+(pdf|document|file)',
+            
+            # Simple queries that likely want document info
+            r'^what\s+is\s+this\?*$',
+            r'^tell\s+me\s+about\s+this\?*$',
+        ]
+        
+        # Also look for key phrases that indicate summary queries
+        summary_phrases = [
+            "about this document", 
+            "about this pdf",
+            "document about",
+            "pdf about",
+            "main points",
+            "key points",
+            "this document is about",
+            "what is in this",
+            "what this contains",
+            "summarize",
+            "give me a summary",
+            "brief overview",
+            "highlight the main",
+        ]
+        
+        # Check both regex patterns and phrases
+        for pattern in summary_patterns:
+            if re.search(pattern, query_lower, re.IGNORECASE):
+                return True
+                
+        for phrase in summary_phrases:
+            if phrase in query_lower:
+                return True
+                
+        return False
+        
+    async def _generate_document_summary(
+        self, 
+        ai_generator, 
+        query: str, 
+        context: str, 
+        doc: Dict[str, Any]
+    ) -> str:
+        """
+        Generate a document summary using specialized prompting techniques.
+        
+        This method uses few-shot prompting and other advanced techniques to
+        generate a high-quality document summary response.
+        
+        Args:
+            ai_generator: The AI response generator instance
+            query: The user's query string
+            context: The document context (metadata + content)
+            doc: The full document object
+            
+        Returns:
+            Generated summary response
+        """
+        # Use T5 model with specialized prompting
+        if ai_generator.t5_available:
+            try:
+                # Generate response using the standard mechanism that now uses T5
+                response = await ai_generator.generate_response(query, context)
+                return response
+            except Exception as e:
+                logger.error(f"Error in specialized document summary generation: {str(e)}")
+                # Fall back to standard generation
+                return await ai_generator.generate_response(query, context)
+        else:
+            # Use standard generation if T5 is not available
+            return await ai_generator.generate_response(query, context)
+
+# Create connection manager
+manager = ConnectionManager()
+
+# Create a background task wrapper for async processes
+def process_document_task(doc_id: str):
+    """
+    Wrapper function for processing a document in a background task.
+    This is a non-async function to properly work with FastAPI's background tasks.
+    
+    Args:
+        doc_id: Document ID
+    """
+    # Use a new asyncio event loop to run the async processing
+    import asyncio
+    
+    async def _run_async_processing():
+        try:
+            await pdf_processor.process_document(doc_id)
+        except Exception as e:
+            logger.exception(f"Error processing document {doc_id}: {str(e)}")
+            # Update document status to error
+            await json_storage.update_document(doc_id, {
+                "processing_status": "error",
+                "error_message": str(e)
+            })
+    
+    # Create a new event loop for this task
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        # Run the async task in this new loop
+        loop.run_until_complete(_run_async_processing())
+    finally:
+        loop.close()
+
+
+@router.post("/documents/upload", status_code=status.HTTP_201_CREATED)
+@log_function_call
+async def upload_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+):
+    """
+    Upload a PDF document.
+    
+    Args:
+        background_tasks: FastAPI background tasks
+        file: Uploaded file
+        title: Document title (optional)
+        
+    Returns:
+        Document details
+    """
+    # Validate file type
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF files are supported",
+        )
+    
+    # Validate file size
+    content = await file.read()
+    file_size = len(content)
+    await file.seek(0)
+    
+    if file_size > config.MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File size exceeds maximum allowed size of {config.MAX_UPLOAD_SIZE_MB}MB",
+        )
+    
+    temp_path = None
+    try:
+        # Create a temporary file
+        temp_path = Path(config.DATA_DIR) / "temp" / f"{uuid.uuid4()}.pdf"
+        temp_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Write file content
+        with open(temp_path, "wb") as f:
+            f.write(content)
+        
+        # Create document record first
+        doc_obj = {
+            "filename": file.filename,
+            "file_path": str(temp_path),
+            "upload_time": datetime.now().isoformat(),
+            "processed": False,
+            "processing_status": "pending",
+        }
+        
+        # Create the document directly
+        doc_id = await json_storage.create_document(doc_obj)
+        
+        if not doc_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create document record",
+            )
+        
+        # Update title if provided
+        if title:
+            await json_storage.update_document(doc_id, {"title": title})
+        
+        # Use our wrapper function for the background task
+        # This ensures proper async handling
+        background_tasks.add_task(process_document_task, doc_id)
+        
+        # Get the document
+        doc = await json_storage.get_document(doc_id)
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to retrieve document after upload",
+            )
+        
+        logger.info(f"Document uploaded successfully: {doc_id}")
+        
+        # Return document details
+        return {
+            "id": doc_id,
+            "filename": doc["filename"],
+            "title": doc.get("title", Path(doc["filename"]).stem),
+            "upload_time": doc["upload_time"],
+            "page_count": doc.get("page_count", 0),
+            "processing_status": doc.get("processing_status", "pending"),
+        }
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.exception(f"Error uploading document: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload document: {str(e)}",
+        )
+    
+    finally:
+        # Do not delete the temp file here since it's needed for processing
+        # It will be handled after processing is complete
+        pass
+
+
+@router.get("/documents")
+@log_function_call
+async def get_documents():
+    """
+    Get all documents.
+    
+    Returns:
+        List of documents
+    """
+    try:
+        docs = await json_storage.get_documents()
+        
+        # Format response
+        return [
+            {
+                "id": doc["id"],
+                "filename": doc["filename"],
+                "title": doc.get("title", Path(doc["filename"]).stem),
+                "upload_time": doc["upload_time"],
+                "page_count": doc.get("page_count", 0),
+                "processing_status": doc.get("processing_status", "pending"),
+                "processed": doc.get("processed", False),
+            }
+            for doc in docs
+        ]
+    except Exception as e:
+        logger.error(f"Error getting documents: {str(e)}")
+        return []
+
+
+@router.get("/documents/{doc_id}")
+@log_function_call
+async def get_document(doc_id: str):
+    """
+    Get a document by ID.
+    
+    Args:
+        doc_id: Document ID
+        
+    Returns:
+        Document details
+    """
+    doc = await json_storage.get_document(doc_id)
+    
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    
+    # Format response
+    return {
+        "id": doc["id"],
+        "filename": doc["filename"],
+        "title": doc.get("title", Path(doc["filename"]).stem),
+        "upload_time": doc["upload_time"],
+        "page_count": doc.get("page_count", 0),
+        "processing_status": doc.get("processing_status", "pending"),
+        "processed": doc.get("processed", False),
+    }
+
+
+@router.delete("/documents/{doc_id}")
+@log_function_call
+async def delete_document(doc_id: str):
+    """
+    Delete a document.
+    
+    Args:
+        doc_id: Document ID
+        
+    Returns:
+        Success message
+    """
+    doc = await json_storage.get_document(doc_id)
+    
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    
+    # Delete document file
+    file_path = Path(doc["file_path"])
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Delete document record
+    success = await json_storage.delete_document(doc_id)
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete document",
+        )
+    
+    return {"message": "Document deleted successfully"}
+
+
+@router.get("/documents/{doc_id}/chat")
+@log_function_call
+async def get_chat_history(doc_id: str):
+    """
+    Get chat history for a document.
+    
+    Args:
+        doc_id: Document ID
+        
+    Returns:
+        List of chat messages
+    """
+    # Check if document exists
+    doc = await json_storage.get_document(doc_id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    
+    # Get chat history
+    messages = await json_storage.get_chat_history(doc_id)
+    
+    # Format response
+    return [
+        {
+            "id": msg.get("id", str(i)),
+            "type": msg["type"],
+            "content": msg["content"],
+            "timestamp": msg["timestamp"],
+        }
+        for i, msg in enumerate(messages)
+    ]
+
+
+async def save_chat_history(doc_id: str, user_message: str, system_response: str):
+    """
+    Save user message and system response to chat history.
+    
+    Args:
+        doc_id: Document ID
+        user_message: User's message
+        system_response: System's response
+    """
+    try:
+        # Create user message object
+        user_msg = {
+            "id": f"msg_{uuid.uuid4().hex[:8]}",
+            "type": "user",
+            "content": user_message,
+            "timestamp": datetime.now().isoformat(),
+        }
+        
+        # Save user message
+        await json_storage.save_chat_message(doc_id, user_msg)
+        
+        # Create system response object
+        if isinstance(system_response, dict) and "content" in system_response:
+            # If system_response is already a structured response object
+            system_msg = {
+                "id": f"msg_{uuid.uuid4().hex[:8]}",
+                "type": "system",
+                "content": system_response["content"],
+                "timestamp": datetime.now().isoformat(),
+            }
+        else:
+            # If system_response is just a string
+            system_msg = {
+                "id": f"msg_{uuid.uuid4().hex[:8]}",
+                "type": "system",
+                "content": system_response,
+                "timestamp": datetime.now().isoformat(),
+            }
+        
+        # Save system response
+        await json_storage.save_chat_message(doc_id, system_msg)
+        
+        logger.debug(f"Chat history saved for document {doc_id}")
+    except Exception as e:
+        logger.error(f"Error saving chat history: {str(e)}")
+
+
+@router.post("/chat/message")
+@log_function_call
+async def chat_message(
+    message: ChatMessage,
+    background_tasks: BackgroundTasks
+) -> Dict[str, Any]:
+    """
+    Handle a chat message and generate a response.
+    
+    Args:
+        message: The chat message object
+        background_tasks: FastAPI background tasks
+        
+    Returns:
+        Dictionary containing the response and metadata
+    """
+    try:
+        # Get the document
+        doc = await json_storage.get_document(message.document_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Generate response using PDF processor
+        from app.utils.pdf_processor import pdf_processor
+        response = await pdf_processor.query_document(
+            doc_id=message.document_id,
+            query=message.content,
+            doc=doc
+        )
+        
+        # Save the message and response to chat history
+        background_tasks.add_task(
+            save_chat_history,
+            message.document_id,
+            message.content,
+            response
+        )
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error processing chat message: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error processing your message. Please try again."
+        )
+
+
+@router.websocket("/chat/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for chat functionality.
+    
+    Handles real-time chat with documents.
+    """
+    try:
+        # Accept the connection
+        await manager.connect(websocket)
+        
+        # Log successful connection
+        client = websocket.client
+        logger.info(f"WebSocket connection established from {client.host}:{client.port}")
+        
+        # Preload AI models if not already loaded (do this in background)
+        try:
+            if not hasattr(ai_response_generator, '_models_loading'):
+                ai_response_generator._models_loading = True
+                # Start model loading in the background
+                asyncio.create_task(ai_response_generator.load_models())
+        except Exception as e:
+            logger.warning(f"Error preloading AI models: {str(e)}")
+        
+        # Send welcome message
+        await manager.send_personal_message(
+            {
+                "type": "connection_established",
+                "message": "Connected to AlyaAloft chat server",
+                "timestamp": datetime.now().isoformat(),
+            },
+            websocket,
+        )
+        
+        # Process messages in a loop
+        while True:
+            # Receive message from WebSocket
+            try:
+                data = await websocket.receive_json()
+            except WebSocketDisconnect:
+                logger.info("WebSocket disconnected normally")
+                break
+            except Exception as e:
+                logger.error(f"Error receiving message: {str(e)}")
+                break
+                
+            # Log received message
+            logger.debug(f"Received message: {data}")
+            
+            try:
+                # Process message based on type
+                message_type = data.get("type")
+                
+                if message_type == "chat_message":
+                    # Extract data from message
+                    content = data.get("content", "").strip()
+                    doc_id = data.get("document_id")
+                    
+                    # Validate input
+                    if not content:
+                        await manager.send_personal_message(
+                            {
+                                "type": "error",
+                                "message": "Message content cannot be empty",
+                                "timestamp": datetime.now().isoformat(),
+                            },
+                            websocket,
+                        )
+                        continue
+                    
+                    if not doc_id:
+                        await manager.send_personal_message(
+                            {
+                                "type": "error",
+                                "message": "No document selected",
+                                "timestamp": datetime.now().isoformat(),
+                            },
+                            websocket,
+                        )
+                        continue
+                    
+                    # Process the chat message
+                    await process_chat_message(websocket, doc_id, content)
+                
+                elif message_type == "ping":
+                    # Respond to ping - important for keeping connection alive
+                    await manager.send_personal_message(
+                        {
+                            "type": "pong",
+                            "timestamp": datetime.now().isoformat(),
+                        },
+                        websocket,
+                    )
+                
+                else:
+                    # Unknown message type
+                    logger.warning(f"Unknown message type: {message_type}")
+            
+            except Exception as e:
+                logger.error(f"Error processing message: {str(e)}")
+                # Send error message to client
+                await manager.send_personal_message(
+                    {
+                        "type": "error",
+                        "message": "An error occurred while processing your message",
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                    websocket,
+                )
+    
+    except WebSocketDisconnect:
+        # Handle disconnect
+        manager.disconnect(websocket)
+        logger.info("WebSocket disconnected")
+    
+    except Exception as e:
+        # Handle any other exceptions
+        logger.error(f"WebSocket error: {str(e)}")
+        try:
+            manager.disconnect(websocket)
+        except:
+            pass
+
+async def process_chat_message(websocket: WebSocket, doc_id: str, content: str):
+    """
+    Process a chat message from a user.
+    
+    Args:
+        websocket: WebSocket connection
+        doc_id: Document ID
+        content: Message content
+    """
+    try:
+        # Get document
+        doc = await json_storage.get_document(doc_id)
+        if not doc:
+            await manager.send_personal_message(
+                {
+                    "type": "error",
+                    "message": "Document not found",
+                    "timestamp": datetime.now().isoformat(),
+                },
+                websocket,
+            )
+            return
+        
+        # Create user message
+        user_message = {
+            "id": f"msg_{uuid.uuid4().hex[:8]}",
+            "type": "user",
+            "content": content,
+            "timestamp": datetime.now().isoformat(),
+        }
+        
+        # Save user message
+        await json_storage.save_chat_message(doc_id, user_message)
+        
+        # Send confirmation
+        await manager.send_personal_message(
+            {
+                "type": "message_received",
+                "message_id": user_message["id"],
+                "timestamp": datetime.now().isoformat(),
+            },
+            websocket,
+        )
+        
+        # Check if document is processed
+        if not doc.get("processed", False):
+            # Document not processed yet
+            doc_status = doc.get("processing_status", "pending")
+            status_message = "The document is still being processed. Please try again later."
+            
+            if doc_status == "pending":
+                status_message = "Your document is in the queue to be processed. This may take a few moments depending on the file size."
+            elif doc_status == "processing":
+                status_message = "Your document is being analyzed. This process includes text extraction, chunking, and embedding creation which may take a few moments."
+            elif doc_status == "failed":
+                status_message = "We couldn't process your document due to an error. Please try uploading it again or contact support if the issue persists."
+            
+            system_response = {
+                "id": f"msg_{uuid.uuid4().hex[:8]}",
+                "type": "system",
+                "content": status_message,
+                "timestamp": datetime.now().isoformat(),
+            }
+            
+            # Save system response
+            await json_storage.save_chat_message(doc_id, system_response)
+            
+            # Send response
+            await manager.send_personal_message(
+                {
+                    "type": "chat_message",
+                    "message": system_response,
+                    "timestamp": datetime.now().isoformat(),
+                },
+                websocket,
+            )
+            return
+        
+        # Send a processing message first
+        await manager.send_personal_message(
+            {
+                "type": "processing",
+                "message": "Analyzing document...",
+                "timestamp": datetime.now().isoformat(),
+            },
+            websocket,
+        )
+        
+        # Check if the query is unclear or garbled - detect short nonsensical queries
+        is_unclear_query_result = False
+        if is_unclear_query(content):
+            # If unclear query, handle it as a special case
+            logger.info(f"Detected unclear query: {content}")
+            is_unclear_query_result = True
+        
+        # Check if this is a document summary query
+        is_summary_query_result = False
+        if is_summary_query(content):
+            logger.info(f"Detected document summary query: {content}")
+            is_summary_query_result = True
+            
+            # Process as summary query
+            await handle_document_summary_query(websocket, doc_id, content, doc)
+            return
+        
+        # Get relevant document chunks for the query
+        try:
+            relevant_chunks = await pdf_processor.query_document(
+                doc_id,
+                content,
+                    doc=doc
+            )
+        except Exception as e:
+            logger.error(f"Error querying document: {str(e)}")
+            # Provide a graceful fallback response
+            system_response = {
+                "id": f"msg_{uuid.uuid4().hex[:8]}",
+                "type": "system",
+                "content": "I'm having trouble processing your question. Could you try rephrasing it?",
+                "timestamp": datetime.now().isoformat(),
+                "is_fallback": True
+            }
+            
+            # Save system response
+            await json_storage.save_chat_message(doc_id, system_response)
+            
+            # Send response
+            await manager.send_personal_message(
+                {
+                "type": "chat_message",
+                "message": system_response,
+                    "timestamp": datetime.now().isoformat(),
+                },
+                websocket,
+            )
+            return        
+        
+        # Check if relevant_chunks is a string (error message or direct response)
+        if isinstance(relevant_chunks, str):
+            # Create a system response with the string content
+            system_response = {
+                "id": f"msg_{uuid.uuid4().hex[:8]}",
+                "type": "system",
+                "content": relevant_chunks,
+                "timestamp": datetime.now().isoformat(),
+                "is_fallback": True
+            }
+            
+            # Save system response
+            await json_storage.save_chat_message(doc_id, system_response)
+            
+            # Send response
+            await manager.send_personal_message(
+                {
+                    "type": "chat_message",
+                    "message": system_response,
+                    "timestamp": datetime.now().isoformat(),
+                },
+                websocket,
+            )
+            return
+        
+        # If we reached here, check if relevant_chunks is a dictionary with content
+        if isinstance(relevant_chunks, dict) and 'content' in relevant_chunks:
+            # This is the expected case - query_document returns a dict with 'content' field
+            context = relevant_chunks.get('content', '')
+        else:
+            # Fallback - construct a context from whatever was returned
+            context = str(relevant_chunks)
+        
+        # Generate AI response
+        try:
+            # Generate AI response with the context
+            ai_response = await ai_response_generator.generate_response(content, context)
+            
+            # Create system response
+            system_response = {
+                "id": f"msg_{uuid.uuid4().hex[:8]}",
+                "type": "system",
+                "content": ai_response,
+                "timestamp": datetime.now().isoformat(),
+                "is_fallback": False,  # We successfully generated a response
+            }
+            
+            # Save system response
+            await json_storage.save_chat_message(doc_id, system_response)
+            
+            # Send response
+            await manager.send_personal_message(
+                {
+                    "type": "chat_message",
+                    "message": system_response,
+                    "timestamp": datetime.now().isoformat(),
+                },
+                websocket,
+            )
+        except Exception as e:
+            logger.error(f"Error generating AI response: {str(e)}")
+            await manager.send_personal_message(
+                {
+                    "type": "error",
+                    "message": "An error occurred while generating a response. Please try again.",
+                    "timestamp": datetime.now().isoformat(),
+                },
+                websocket,
+            )
+    except Exception as e:
+        logger.error(f"Error processing chat message: {str(e)}")
+        await manager.send_personal_message(
+            {
+                "type": "error",
+                "message": "An error occurred while processing your message",
+                "timestamp": datetime.now().isoformat(),
+            },
+            websocket,
+        )
+
+async def handle_document_summary_query(websocket: WebSocket, doc_id: str, content: str, doc: Dict[str, Any]):
+    """
+    Handle a query asking for document summary or overview.
+    
+    Args:
+        websocket: WebSocket connection
+        doc_id: Document ID
+        content: Query text
+        doc: Document object
+    """
+    try:
+        # Create a specialized context for document summaries
+        # Include document metadata and first parts of content
+        title = doc.get("title", Path(doc.get("filename", "document.pdf")).stem)
+        page_count = doc.get("page_count", 0)
+        upload_time = doc.get("upload_time", "")
+        
+        # Build context for document summary
+        summary_context = f"Document Title: {title}\n"
+        summary_context += f"Pages: {page_count}\n"
+        summary_context += f"Uploaded: {upload_time}\n\n"
+        
+        # Add a few paragraphs from the document if available
+        full_text = doc.get("full_text", "")
+        if full_text:
+            # Add first 2000 characters as a sample
+            summary_context += "Document begins with:\n"
+            summary_context += full_text[:2000] + "...\n\n"
+        
+        # Generate AI response specifically for document summary
+        ai_response = await ai_response_generator.generate_response(
+            content,
+            {"is_document_summary": True, "content": summary_context}
+        )
+        
+        # Create system response
+        system_response = {
+            "id": f"msg_{uuid.uuid4().hex[:8]}",
+            "type": "system",
+            "content": ai_response,
+            "timestamp": datetime.now().isoformat(),
+            "is_summary": True
+        }
+        
+        # Save system response
+        await json_storage.save_chat_message(doc_id, system_response)
+        
+        # Send response
+        await manager.send_personal_message(
+            {
+                "type": "chat_message",
+                "message": system_response,
+                "timestamp": datetime.now().isoformat(),
+            },
+            websocket,
+        )
+    except Exception as e:
+        logger.error(f"Error handling document summary query: {str(e)}")
+        await manager.send_personal_message(
+            {
+                "type": "error",
+                "message": "An error occurred while summarizing the document",
+                "timestamp": datetime.now().isoformat(),
+            },
+            websocket,
+        )

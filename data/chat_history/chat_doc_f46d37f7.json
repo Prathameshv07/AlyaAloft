@@ -1,0 +1,146 @@
+{
+  "messages": [
+    {
+      "id": "msg_516058fa",
+      "type": "user",
+      "content": "what is nlp",
+      "timestamp": "2025-05-09T09:30:14.651831"
+    },
+    {
+      "id": "msg_400a4522",
+      "type": "user",
+      "content": "what is nlp",
+      "timestamp": "2025-05-09T09:30:48.901873"
+    },
+    {
+      "id": "msg_350ef606",
+      "type": "user",
+      "content": "what is nlp",
+      "timestamp": "2025-05-09T10:02:17.711077"
+    },
+    {
+      "id": "msg_d231db77",
+      "type": "system",
+      "content": "I'm sorry, I encountered an issue processing your question. Please try rephrasing or ask another question.",
+      "timestamp": "2025-05-09T10:02:21.307525",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_16bc76d5",
+      "type": "user",
+      "content": "what is nlp",
+      "timestamp": "2025-05-09T10:03:29.454142"
+    },
+    {
+      "id": "msg_fdd34a0a",
+      "type": "system",
+      "content": "I'm sorry, I encountered an issue processing your question. Please try rephrasing or ask another question.",
+      "timestamp": "2025-05-09T10:03:32.518804",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_158efbe0",
+      "type": "user",
+      "content": "what is nlp",
+      "timestamp": "2025-05-09T10:05:26.114601"
+    },
+    {
+      "id": "msg_d34f5e74",
+      "type": "system",
+      "content": "NLP (National League for Peace) is a political party in the United States. NLP is an acronym for National People's Party (NPP) or National League for Democracy (NLPD). The NLP was founded in 1924 and is headquartered in Washington, D.C. Its members are members of the Democratic National Committee (DNC).",
+      "timestamp": "2025-05-09T10:05:35.282047",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_1f27c098",
+      "type": "user",
+      "content": "what is ambiguity, explain one type & provide example of the type",
+      "timestamp": "2025-05-09T10:08:49.643557"
+    },
+    {
+      "id": "msg_356c79ba",
+      "type": "system",
+      "content": "An ambiguous word is a word that can be used to describe something that is not clear. An example of ambiguity is \"I don't know what you're saying\" or \"I'm not sure what I'm saying.\" The word \"ambiguity\" can also refer to:",
+      "timestamp": "2025-05-09T10:08:57.985836",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_8c2415fc",
+      "type": "user",
+      "content": "what is nlp",
+      "timestamp": "2025-05-09T10:19:59.427986"
+    },
+    {
+      "id": "msg_4cf03b91",
+      "type": "system",
+      "content": "NLP is a field of computer science and artificial intelligence that focuses on the interaction between computers and humans through natural language. It involves developing algorithms and models that enable computers to understand, interpret, and generate human language in a valuable way. NLP combines computational linguistics, machine learning, and deep learning to process and analyze large amounts of natural language data.",
+      "timestamp": "2025-05-09T10:20:34.722505",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_11acb681",
+      "type": "user",
+      "content": "what is ambiguity, explain one type with example",
+      "timestamp": "2025-05-09T10:21:04.755072"
+    },
+    {
+      "id": "msg_065f92da",
+      "type": "system",
+      "content": "Lexical ambiguity is when a single word has multiple meanings (e.g., 'bank' can be a financial institution or the side of a river). Syntactic ambiguy is when the sentence structure allows multiple interpretations (i.e., I saw the man with the telescope' - who had the telescope?).",
+      "timestamp": "2025-05-09T10:22:00.439191",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_79c28fbe",
+      "type": "user",
+      "content": "please explain what this pdf is about",
+      "timestamp": "2025-05-09T10:22:22.623427"
+    },
+    {
+      "id": "msg_098b7844",
+      "type": "system",
+      "content": "'is_document_summary': False, 'content': 'Document Title: NLPnPages: 159nUploaded: 2025-05-09T09:29:09.684133nnDTP composed and Printed by: nUniversity of Mumbai, MumbainDr.",
+      "timestamp": "2025-05-09T10:23:14.339486",
+      "is_summary": true
+    },
+    {
+      "id": "msg_af56632f",
+      "type": "user",
+      "content": "what is fast fourier transform",
+      "timestamp": "2025-05-09T10:23:25.121418"
+    },
+    {
+      "id": "msg_d0e940f3",
+      "type": "system",
+      "content": "Fast Fourier Transform (FFT) is a fast fourier transform algorithm. It is based on the Fourier transform theory of differential equations. The FFT is an algorithm for calculating the coefficients of a differential equation. It can be used to calculate the formula_1 formula_2 formula_3 formula_4 formula_5 formula_6 formula_7 formula_8 formula_9 formula_10 formula_11 formula_12 formula_13 formula_14 formula_15 formula_16 formula_17 formula_18 formula_19 formula_20 formula_21 formula_22 formula_23 formula_24 formula_25 formula_26 formula_27 formula_28 formula_29 formula_30 formula_41 formula_34 formula_35 formula_36 formula_37 formula_42 formula_45 formula_46 formula_47 formula_55 formula_56 formula_58 formula_59 formula_62 formula_66 formula_67 formula_89 formula_91 formula_92 formula_94 formula_95 formula_96 formula_97 formula_98 formula_99 formula_101 formula_110 formula_111 formula_115 formula_117 formula_118 formula_119 formula_120 formula_137 formula_146 formula_147 formula_158 formula_143 formula_145 formula_156 formula_153 formula_154 formula_157 formula_155 formula_159 formula_166 formula_198 formula_195 formula_172 formula_207 formula_188 formula_199 formula_190 formula_202 formula_205 formula_206 formula_210 formula_222 formula_203 formula_204 formula_200 formula_214 formula_225 formula_216 formula_201 formula_208 formula_211 formula_212 formula_123 formula_174 formula_185 formula_186 formula_189 formula_196 formula_197 formula_183 formula_184 formula_165 formula_187 formula_192 formula_164 formula_176 formula_179 formula_168 formula_169 formula_180 formula_node_a",
+      "timestamp": "2025-05-09T10:25:55.575494",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_772f0cf4",
+      "type": "user",
+      "content": "what is fast fourier transform",
+      "timestamp": "2025-05-09T10:27:49.265157"
+    },
+    {
+      "id": "msg_053b6102",
+      "type": "system",
+      "content": "Fast Fourier Transform (FFT) is a fast fourier transform algorithm. It is based on the Fourier transform theory of differential equations. The FFT is an algorithm for calculating the coefficients of a differential equation. It can be used to calculate a number of factors.",
+      "timestamp": "2025-05-09T10:28:16.825578",
+      "is_fallback": false
+    },
+    {
+      "id": "msg_6111b525",
+      "type": "user",
+      "content": "why cheetah is faster then lion",
+      "timestamp": "2025-05-09T10:28:52.405229"
+    },
+    {
+      "id": "msg_9e0c4440",
+      "type": "system",
+      "content": "The relevant information to answer the question is: I couldn't find any relevant information in the document to answer your question. Please try asking something else. Question: Why cheetah is faster than lion. So, the final answer is because it's faster than the other two animals.",
+      "timestamp": "2025-05-09T10:29:15.262875",
+      "is_fallback": false
+    }
+  ]
+}

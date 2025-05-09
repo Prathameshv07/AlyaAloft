@@ -1,0 +1,202 @@
+/**
+ * AlyaAloft - Custom CSS styles
+ */
+
+/* Smooth scrolling for the entire page */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Better focus styles for accessibility */
+:focus {
+    outline: 2px solid #0ea5e9;
+    outline-offset: 2px;
+}
+
+/* Message styling */
+.message {
+    max-width: 85%;
+    margin-bottom: 1rem;
+}
+
+.message.user {
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.message.system {
+    align-self: flex-start;
+    margin-right: auto;
+}
+
+.message-icon.user {
+    background-color: #0ea5e9;
+    color: white;
+}
+
+.message-icon.system {
+    background-color: #e5e7eb;
+    color: #4b5563;
+}
+
+/* User message styling */
+.message.user .message-content {
+    background-color: #0ea5e9;
+    color: white;
+    border-radius: 1rem 0 1rem 1rem;
+    padding: 0.75rem 1rem;
+}
+
+.message.user .message-meta {
+    color: #e0f2fe;
+    text-align: right;
+    padding-right: 0.5rem;
+}
+
+/* System message styling */
+.message.system .message-content {
+    background-color: #f3f4f6;
+    border-radius: 0 1rem 1rem 1rem;
+    padding: 0.75rem 1rem;
+}
+
+/* Document status badges */
+.document-status.pending {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.document-status.processing {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+.document-status.completed {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.document-status.failed {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Connection status styling */
+#connection-status.connected,
+#mobile-connection-status.connected {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+#connection-status.connecting,
+#mobile-connection-status.connecting {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+#connection-status.disconnected,
+#mobile-connection-status.disconnected {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+/* Selected document styling */
+.document.selected {
+    border-color: #0ea5e9;
+    background-color: #f0f9ff;
+}
+
+/* Code block styling */
+pre {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+code {
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+/* Markdown table styling */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+}
+
+th, td {
+    border: 1px solid #e5e7eb;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+th {
+    background-color: #f9fafb;
+    font-weight: 600;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+/* Spinner animation */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .message {
+        max-width: 90%;
+    }
+    
+    main {
+        height: calc(100vh - 64px);
+    }
+    
+    #messages-container {
+        height: 100%;
+    }
+}
+
+/* Dark mode support (future enhancement) */
+@media (prefers-color-scheme: dark) {
+    /* These will be activated if/when dark mode is implemented */
+    /*
+    html.dark-mode {
+        background-color: #1e293b;
+        color: #e2e8f0;
+    }
+    
+    html.dark-mode .bg-white {
+        background-color: #0f172a;
+    }
+    
+    html.dark-mode .bg-gray-50 {
+        background-color: #1e293b;
+    }
+    */
+} 
