@@ -24,6 +24,9 @@ AlyaAloft uses several techniques to improve the quality of FLAN-T5 responses:
 5. **Context Preprocessing**: Formats document context for better understanding
 6. **Response Enhancement**: Post-processes responses for readability and completeness
 
+## Screenshots
+![Screenshot 2025-05-09 185756](https://github.com/user-attachments/assets/186a0560-6e62-46a4-aadf-912477072d55)
+
 ## Video Preview
 Check out my application: [AlyaAloft](https://drive.google.com/file/d/1yh6PwrA9BkQT_A1Vz3L7Cna-tNLyN0TO/view)
 
@@ -96,10 +99,6 @@ python start_app.py --host 0.0.0.0 --port 9000 --log-level DEBUG
 2. **Upload a PDF document** using the upload button
 3. **Ask questions** about the document in natural language
 4. **View responses** with reference to the source document
-
-## Screenshots
-
-![Screenshot 2025-05-09 185756](https://github.com/user-attachments/assets/186a0560-6e62-46a4-aadf-912477072d55)
 
 ## Advanced Configuration
 
