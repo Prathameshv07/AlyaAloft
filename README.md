@@ -1,5 +1,8 @@
 # AlyaAloft: Advanced Document Q&A with FLAN-T5
 
+![AlyaAloft Banner](app/static/images/banner.png)
+
+## Overview
 AlyaAloft is a powerful document question-answering application that uses the FLAN-T5 language model with enhanced prompting techniques to provide high-quality responses to user queries about document content.
 
 ## Key Features
