@@ -89,12 +89,6 @@ python start_app.py --host 0.0.0.0 --port 9000 --log-level DEBUG
 3. **Ask questions** about the document in natural language
 4. **View responses** with reference to the source document
 
-## Acknowledgments
-
-- Google's FLAN-T5 model for the base language capabilities
-- Hugging Face for their excellent transformers library
-- FastAPI for the web framework
-
 ## License
 
 [![License: CC BY-NC 4.0](https://licensebuttons.net/l/by-nc/4.0/88x31.png)](http://creativecommons.org/licenses/by-nc/4.0/)
