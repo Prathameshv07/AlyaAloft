@@ -1,4 +1,4 @@
-# AlyaAloft: Advanced Document Q&A with FLAN-T5
+# AlyaAloft: Advanced Document Q&A
 
 ![AlyaAloft Banner](app/static/images/banner.png)
 
