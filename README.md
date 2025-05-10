@@ -13,17 +13,6 @@ AlyaAloft is a powerful document question-answering application that uses the FL
 - **Conversation Memory**: Maintain context across multiple user queries
 - **Responsive Web Interface**: Clean, modern UI for document upload and querying
 
-## Model Enhancements
-
-AlyaAloft uses several techniques to improve the quality of FLAN-T5 responses:
-
-1. **Domain-Specific Prompting**: Automatically detects the query domain (NLP, Linguistics, Computer Science, etc.) and uses specialized prompts
-2. **Question Type Detection**: Identifies query types (definition, explanation, comparison, etc.) to format prompts for optimal responses
-3. **Chain-of-Thought Reasoning**: For complex questions, guides the model through a structured reasoning process
-4. **Iterative Refinement**: For highly complex questions, uses a multi-stage approach to build comprehensive answers
-5. **Context Preprocessing**: Formats document context for better understanding
-6. **Response Enhancement**: Post-processes responses for readability and completeness
-
 ## Screenshots
 ![Screenshot 2025-05-09 185756](https://github.com/user-attachments/assets/186a0560-6e62-46a4-aadf-912477072d55)
 
@@ -95,31 +84,10 @@ python start_app.py --host 0.0.0.0 --port 9000 --log-level DEBUG
 
 ## Usage
 
-1. **Open the web interface** in your browser at http://127.0.0.1:8000
+1. **Open the web interface** in your browser at http://127.0.0.1:8000/chat
 2. **Upload a PDF document** using the upload button
 3. **Ask questions** about the document in natural language
 4. **View responses** with reference to the source document
-
-## Advanced Configuration
-
-You can customize various settings in the following configuration files:
-
-- `app/app_config.py`: General application settings
-- `app/config/model_config.py`: Model and prompting configuration
-
-## Optimizing Performance
-
-For best performance:
-
-- Use a CUDA-enabled GPU with PyTorch CUDA support
-- Install `bitsandbytes` for 8-bit quantization (`pip install bitsandbytes`)
-- Consider adjusting the context length and batch size based on your hardware
-
-## Troubleshooting
-
-- **Model Loading Errors**: Check that the model files were downloaded correctly in the `models/flan-t5-base` directory
-- **Memory Issues**: Try using a smaller model variant or reduce the batch size and context length in `model_config.py`
-- **CUDA Errors**: Ensure your PyTorch installation supports CUDA and your GPU drivers are up to date
 
 ## Acknowledgments
 
