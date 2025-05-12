@@ -16,8 +16,10 @@ AlyaAloft is a powerful document question-answering application that uses the FL
 ## Screenshots
 ![Screenshot 2025-05-09 185756](https://github.com/user-attachments/assets/186a0560-6e62-46a4-aadf-912477072d55)
 
-## Video Preview
-Check out my application: [AlyaAloft](https://drive.google.com/file/d/1yh6PwrA9BkQT_A1Vz3L7Cna-tNLyN0TO/view)
+## Demo & Documentation
+
+- 📄 [Project Documentation](AlyaAloft_documentation.md)  
+- 🎥 [Video Preview](https://drive.google.com/file/d/1yh6PwrA9BkQT_A1Vz3L7Cna-tNLyN0TO/view)
 
 ## Getting Started
 
