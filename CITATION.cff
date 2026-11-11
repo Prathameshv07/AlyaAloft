@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it using the metadata below."
+type: software
+title: "AlyaAloft: Retrieval-Augmented Document Question Answering with FLAN-T5"
+authors:
+  - given-names: "Prathamesh Sarjerao"
+    family-names: "Vaidya"
+    orcid: "https://orcid.org/0009-0000-8091-4256"
+repository-code: "https://github.com/Prathameshv07/AlyaAloft"
+license: CC-BY-NC-4.0
+date-released: "2025-05-12"
+abstract: "A FastAPI system for question answering over PDF documents that combines sentence-embedding retrieval (all-MiniLM-L6-v2), document structure extraction, query-type-aware prompt templates and iterative refinement to obtain grounded answers from a locally run FLAN-T5 model."
+keywords:
+  - "retrieval-augmented generation"
+  - "document question answering"
+  - "FLAN-T5"
+  - "prompt engineering"
+  - "sentence embeddings"
+  - "FastAPI"

@@ -13,7 +13,7 @@ import asyncio
 from datetime import datetime
 import json
 
-import PyPDF2
+from pypdf import PdfReader
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -405,7 +405,7 @@ class PDFProcessor:
         try:
             # First try normal PDF text extraction
             with open(file_path, "rb") as f:
-                pdf = PyPDF2.PdfReader(f)
+                pdf = PdfReader(f)
                 page_count = len(pdf.pages)
                 
                 text_parts = []
@@ -432,7 +432,7 @@ class PDFProcessor:
                 
                 text_parts = []
                 with open(file_path, "rb") as f:
-                    pdf = PyPDF2.PdfReader(f)
+                    pdf = PdfReader(f)
                     page_count = len(pdf.pages)
                     
                     for page_num in range(page_count):

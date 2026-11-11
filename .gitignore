@@ -172,3 +172,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Runtime data created by the app (uploaded documents, embeddings, chat history, models, logs)
+data/
+conversations/
+logs/
+offload/
+models/

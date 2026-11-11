@@ -40,7 +40,7 @@ async def intro_page(request: Request):
     }
     
     # Render template
-    return templates.TemplateResponse("intro.html", context)
+    return templates.TemplateResponse(request, "intro.html", context)
 
 @router.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request):
@@ -62,4 +62,4 @@ async def chat_page(request: Request):
     }
     
     # Render template
-    return templates.TemplateResponse("chat.html", context) 
+    return templates.TemplateResponse(request, "chat.html", context) 
